@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "../auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { GoogleGenAI } from "@google/genai"
 import { CATEGORIES_EXPENSE } from "@/lib/types"
 
