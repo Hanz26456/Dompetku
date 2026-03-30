@@ -8,15 +8,14 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
-  const month = searchParams.get("month")
+  const month = searchParams.get("month") || new Date().toISOString().substring(0, 7)
 
   const budgets = await prisma.budget.findMany({
-    where: {
+    where: { 
       userId: session.user.id,
-      ...(month && { month })
+      month: month
     },
   })
-
   return NextResponse.json(budgets)
 }
 
@@ -31,14 +30,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
 
-  // Use upsert so user can just keep replacing the budget for the same month/category
   const budget = await prisma.budget.upsert({
     where: {
       userId_category_month: {
         userId: session.user.id,
         category,
         month,
-      }
+      },
     },
     update: {
       amount: parseFloat(amount),
@@ -48,7 +46,7 @@ export async function POST(req: NextRequest) {
       category,
       amount: parseFloat(amount),
       month,
-    }
+    },
   })
 
   return NextResponse.json(budget)
@@ -62,7 +60,9 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get("id")
   if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 })
 
-  await prisma.budget.delete({ where: { id } })
-  
+  await prisma.budget.delete({
+    where: { id },
+  })
+
   return NextResponse.json({ success: true })
 }

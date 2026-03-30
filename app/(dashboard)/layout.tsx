@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { AiChatAssistant } from "@/components/ai-chat-assistant"
 
 const navItems = [
   {
@@ -41,6 +42,16 @@ const navItems = [
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" />
         <line x1="6" y1="20" x2="6" y2="14" /><line x1="2" y1="20" x2="22" y2="20" />
+      </svg>
+    ),
+  },
+  {
+    href: "/anggaran",
+    label: "Anggaran",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+        <rect x="2" y="2" width="20" height="20" rx="5" strokeDasharray="4 4" />
       </svg>
     ),
   },
@@ -122,7 +133,7 @@ export default function DashboardLayout({
               Menu
             </div>
             <nav className="flex flex-col gap-0.5">
-              {navItems.slice(0, 4).map((item) => {
+              {navItems.slice(0, 5).map((item) => {
                 const active = pathname === item.href
                 return (
                   <button
@@ -151,7 +162,7 @@ export default function DashboardLayout({
               Dompet
             </div>
             <nav className="flex flex-col gap-0.5">
-              {navItems.slice(4).map((item) => {
+              {navItems.slice(5).map((item) => {
                 const active = pathname === item.href
                 return (
                   <button
@@ -206,6 +217,7 @@ export default function DashboardLayout({
         <div className="max-w-[1280px] mx-auto p-4 lg:p-6">
           {children}
         </div>
+        <AiChatAssistant />
       </main>
     </div>
   )

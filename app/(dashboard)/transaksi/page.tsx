@@ -23,7 +23,11 @@ export default function TransaksiPage() {
     date: new Date().toISOString().split("T")[0],
     walletId: "",
   })
-  const [splitForm, setSplitForm] = useState({ total: "", people: "2", note: "Makan Bareng" })
+  const [splitForm, setSplitForm] = useState({ 
+    total: "", 
+    note: "Makan Bareng",
+    participants: ["Teman 1"] 
+  })
   const [isScanning, setIsScanning] = useState(false)
 
   useEffect(() => { 
@@ -61,8 +65,8 @@ export default function TransaksiPage() {
 
   function handleSplitBill() {
     const totalVal = parseFloat(splitForm.total)
-    const peopleVal = parseInt(splitForm.people)
-    if (!totalVal || !peopleVal) return
+    const peopleVal = splitForm.participants.length + 1 // + self
+    if (!totalVal || isNaN(totalVal)) return
 
     const perPerson = totalVal / peopleVal
     const text = `Halo! Ini rincian patungan *${splitForm.note}*:\n\nTotal: *${formatRupiah(totalVal)}*\nBagi: *${peopleVal} orang*\n\nPer orang bayar: *${formatRupiah(perPerson)}*\n\nBisa transfer ke rekening saya ya, terima kasih! 🙏`
@@ -71,6 +75,44 @@ export default function TransaksiPage() {
     setForm(prev => ({ ...prev, type: "expense", amount: perPerson.toString(), note: `Patungan: ${splitForm.note}` }))
     setShowSplitModal(false)
     setShowForm(true)
+  }
+
+  async function handleSaveSplitPiutang() {
+    const totalVal = parseFloat(splitForm.total)
+    const peopleCount = splitForm.participants.length + 1
+    if (!totalVal || isNaN(totalVal)) return
+    
+    const perPerson = totalVal / peopleCount
+    
+    // 1. Create Piutang entries for each participant
+    for (const name of splitForm.participants) {
+      await fetch("/api/debts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name,
+          amount: perPerson,
+          type: "owed", // Piutang
+          note: `Split: ${splitForm.note}`,
+        })
+      })
+    }
+
+    // 2. Create the full expense transaction
+    await fetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...form,
+        type: "expense",
+        amount: totalVal,
+        note: `Split: ${splitForm.note} (${peopleCount} orang)`,
+      })
+    })
+
+    setShowSplitModal(false)
+    fetchTransactions()
+    fetchWallets()
   }
 
   async function handleScanReceipt(e: React.ChangeEvent<HTMLInputElement>) {
@@ -349,38 +391,78 @@ export default function TransaksiPage() {
       {/* Split Bill Modal */}
       {showSplitModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
             <h2 className="text-lg font-bold text-foreground mb-1">🍕 Split Bill (Patungan)</h2>
             <p className="text-sm text-muted-foreground mb-5">Hitung bagi rata pengeluaran bareng teman</p>
             
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 overflow-y-auto pr-1 flex-1 custom-scrollbar">
               <div>
                 <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">Total Tagihan (Rp)</label>
                 <input className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" placeholder="0" value={splitForm.total} onChange={(e) => setSplitForm({ ...splitForm, total: e.target.value })} />
               </div>
-              <div>
-                <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">Jumlah Orang</label>
-                <input className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" placeholder="2" value={splitForm.people} onChange={(e) => setSplitForm({ ...splitForm, people: e.target.value })} />
-              </div>
+              
               <div>
                 <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">Nama Acara / Makanan</label>
                 <input className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" placeholder="Makan Malam" value={splitForm.note} onChange={(e) => setSplitForm({ ...splitForm, note: e.target.value })} />
               </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">Teman yang ikut</label>
+                  <button 
+                    onClick={() => setSplitForm(prev => ({ ...prev, participants: [...prev.participants, `Teman ${prev.participants.length + 1}`] }))}
+                    className="text-[10px] text-primary font-bold hover:opacity-70"
+                  >
+                    + Tambah Teman
+                  </button>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {splitForm.participants.map((p, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input 
+                        className="flex-1 rounded-xl bg-secondary border border-border px-4 py-2 text-xs text-foreground outline-none" 
+                        value={p} 
+                        onChange={(e) => {
+                          const newPs = [...splitForm.participants]
+                          newPs[i] = e.target.value
+                          setSplitForm({ ...splitForm, participants: newPs })
+                        }} 
+                      />
+                      {splitForm.participants.length > 1 && (
+                        <button 
+                          onClick={() => setSplitForm(prev => ({ ...prev, participants: prev.participants.filter((_, idx) => idx !== i) }))}
+                          className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
               
-              {splitForm.total && splitForm.people && (
-                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 text-center">
-                  <div className="text-xs text-muted-foreground mb-1">Per orang bayar:</div>
-                  <div className="text-lg font-bold text-primary">{formatRupiah(parseFloat(splitForm.total) / parseInt(splitForm.people))}</div>
+              {splitForm.total && (
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 text-center sticky bottom-0 bg-card z-10">
+                  <div className="text-xs text-muted-foreground mb-1">Per orang bayar ({splitForm.participants.length + 1} orang):</div>
+                  <div className="text-lg font-bold text-primary">{formatRupiah(parseFloat(splitForm.total) / (splitForm.participants.length + 1))}</div>
                 </div>
               )}
             </div>
 
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setShowSplitModal(false)} className="px-5 py-2.5 rounded-xl bg-secondary text-muted-foreground text-sm font-semibold cursor-pointer hover:text-foreground transition-colors">
-                Batal
-              </button>
-              <button onClick={handleSplitBill} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold cursor-pointer hover:bg-emerald-700 transition-colors">
-                Bagikan ke WA
+            <div className="flex flex-col gap-2 mt-5">
+              <div className="flex gap-2">
+                <button onClick={() => setShowSplitModal(false)} className="flex-1 px-5 py-2.5 rounded-xl bg-secondary text-muted-foreground text-sm font-semibold cursor-pointer hover:text-foreground transition-colors">
+                  Batal
+                </button>
+                <button onClick={handleSplitBill} className="flex-1 py-2.5 rounded-xl border border-emerald-600 text-emerald-600 text-xs font-semibold cursor-pointer hover:bg-emerald-50 transition-colors">
+                  📞 Kirim WA
+                </button>
+              </div>
+              <button 
+                onClick={handleSaveSplitPiutang} 
+                className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all"
+              >
+                💾 Simpan ke Piutang
               </button>
             </div>
           </div>

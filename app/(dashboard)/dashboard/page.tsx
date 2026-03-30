@@ -31,6 +31,7 @@ export default function DashboardPage() {
   const [wallets, setWallets] = useState<any[]>([])
   const [savings, setSavings] = useState<any[]>([])
   const [debts, setDebts] = useState<Debt[]>([])
+  const [budgets, setBudgets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -39,11 +40,13 @@ export default function DashboardPage() {
       fetch("/api/wallets").then((r) => r.json()),
       fetch("/api/savings").then((r) => r.json()),
       fetch("/api/debts").then((r) => r.json()),
-    ]).then(([txs, wls, svs, dbs]) => {
+      fetch("/api/budgets").then((r) => r.json()),
+    ]).then(([txs, wls, svs, dbs, bgs]) => {
       setTransactions(txs || [])
       setWallets(wls || [])
       setSavings(svs || [])
       setDebts(dbs || [])
+      setBudgets(bgs || [])
       setLoading(false)
     }).catch(err => {
       console.error("Dashboard Fetch Error:", err)
@@ -156,6 +159,34 @@ export default function DashboardPage() {
           <StatCard key={s.label} {...s} />
         ))}
       </div>
+
+      {/* Budget Alerts */}
+      {!loading && budgets.length > 0 && (
+        <div className="flex flex-col gap-4">
+          {budgets.map(b => {
+             const spending = transactions
+               .filter(t => t.type === "expense" && t.category === b.category && t.date.startsWith(currentMonthStr))
+               .reduce((s, t) => s + t.amount, 0)
+             const percent = (spending / b.amount) * 100
+             if (percent < 80) return null
+             
+             return (
+               <div key={b.id} className={`flex items-center justify-between p-4 rounded-xl border animate-in slide-in-from-top-2 duration-500 ${percent >= 100 ? "bg-rose-50 border-rose-100 text-rose-800" : "bg-amber-50 border-amber-100 text-amber-800"}`}>
+                 <div className="flex items-center gap-3">
+                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${percent >= 100 ? "bg-rose-100" : "bg-amber-100"}`}>
+                     {percent >= 100 ? "⚠️" : "💡"}
+                   </div>
+                   <div>
+                     <div className="text-[10px] font-black uppercase tracking-widest opacity-60">Peringatan Anggaran</div>
+                     <div className="text-xs font-bold">Kategori {b.category} sudah terpakai {percent.toFixed(0)}% ({formatRupiah(spending)})</div>
+                   </div>
+                 </div>
+                 <button onClick={() => router.push("/anggaran")} className="text-[10px] font-black uppercase tracking-widest underline decoration-2 underline-offset-4 hover:opacity-70 transition-opacity">Kelola</button>
+               </div>
+             )
+          })}
+        </div>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
