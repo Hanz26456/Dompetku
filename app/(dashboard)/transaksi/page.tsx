@@ -56,15 +56,18 @@ export default function TransaksiPage() {
     setShowForm(false)
     setForm({ ...form, amount: "", note: "", date: new Date().toISOString().split("T")[0] })
     fetchTransactions()
-    fetchWallets() // Refresh balances
+    fetchWallets()
   }
 
   function handleSplitBill() {
-    const perPerson = parseFloat(splitForm.total) / parseInt(splitForm.people)
-    const text = `Halo! Ini rincian patungan *${splitForm.note}*:\n\nTotal: *${formatRupiah(parseFloat(splitForm.total))}*\nBagi: *${splitForm.people} orang*\n\nPer orang bayar: *${formatRupiah(perPerson)}*\n\nBisa transfer ke rekening saya ya, terima kasih! 🙏`
+    const totalVal = parseFloat(splitForm.total)
+    const peopleVal = parseInt(splitForm.people)
+    if (!totalVal || !peopleVal) return
+
+    const perPerson = totalVal / peopleVal
+    const text = `Halo! Ini rincian patungan *${splitForm.note}*:\n\nTotal: *${formatRupiah(totalVal)}*\nBagi: *${peopleVal} orang*\n\nPer orang bayar: *${formatRupiah(perPerson)}*\n\nBisa transfer ke rekening saya ya, terima kasih! 🙏`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank")
     
-    // Auto-fill form and show it for recording
     setForm(prev => ({ ...prev, type: "expense", amount: perPerson.toString(), note: `Patungan: ${splitForm.note}` }))
     setShowSplitModal(false)
     setShowForm(true)
@@ -127,6 +130,7 @@ export default function TransaksiPage() {
   async function handleDelete(id: string) {
     await fetch(`/api/transactions?id=${id}`, { method: "DELETE" })
     fetchTransactions()
+    fetchWallets()
   }
 
   const filtered = transactions.filter((t) => filter === "all" || t.type === filter)
@@ -142,7 +146,7 @@ export default function TransaksiPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Transaksi</h1>
           <p className="text-sm text-muted-foreground mt-1">Catat pemasukan & pengeluaran</p>
@@ -165,24 +169,24 @@ export default function TransaksiPage() {
         </div>
       </div>
 
-      {/* Wallet overview (Simplified) */}
+      {/* Wallet overview */}
       <div className="flex gap-3 mb-6 overflow-x-auto pb-2 scrollbar-hide">
         {wallets.map(w => (
-          <div key={w.id} className="min-w-[140px] bg-card border border-border rounded-xl p-3 shrink-0">
-            <div className="text-[10px] text-muted-foreground uppercase mb-1">{w.name}</div>
-            <div className="text-sm font-bold text-foreground">{formatRupiah(w.balance)}</div>
+          <div key={w.id} className="min-w-[150px] bg-card border border-border rounded-2xl p-4 shadow-sm shrink-0">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{w.name}</div>
+            <div className="text-base font-bold text-foreground">{formatRupiah(w.balance)}</div>
           </div>
         ))}
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[
           { label: "Total Pemasukan", value: formatRupiah(totalIncome), cls: "text-emerald-600 dark:text-emerald-400" },
           { label: "Total Pengeluaran", value: formatRupiah(totalExpense), cls: "text-red-500 dark:text-red-400" },
           { label: "Selisih", value: formatRupiah(totalIncome - totalExpense), cls: totalIncome - totalExpense >= 0 ? "text-primary" : "text-red-500 dark:text-red-400" },
         ].map((c) => (
-          <div key={c.label} className="bg-card border border-border rounded-2xl p-5">
+          <div key={c.label} className="bg-card border border-border rounded-2xl p-5 shadow-sm">
             <div className="text-[11px] text-muted-foreground uppercase tracking-widest mb-2">{c.label}</div>
             <div className={`text-xl font-bold ${c.cls}`}>{c.value}</div>
           </div>
@@ -190,7 +194,7 @@ export default function TransaksiPage() {
       </div>
 
       {/* List card */}
-      <div className="bg-card border border-border rounded-2xl p-5">
+      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
         {/* Filter tabs */}
         <div className="flex gap-2 mb-5">
           {filterOptions.map((f) => (
@@ -217,7 +221,7 @@ export default function TransaksiPage() {
             {filtered.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center gap-3 p-3 rounded-xl bg-secondary hover:bg-muted transition-colors"
+                className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors border border-transparent hover:border-border"
               >
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${
                   t.type === "income" ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-red-100 dark:bg-red-900/30"
@@ -247,8 +251,8 @@ export default function TransaksiPage() {
 
       {/* Modal Form */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-200">
             <h2 className="text-lg font-bold text-foreground mb-1">Tambah Transaksi</h2>
             <p className="text-sm text-muted-foreground mb-5">Catat pemasukan atau pengeluaran baru</p>
 
@@ -296,18 +300,34 @@ export default function TransaksiPage() {
             </div>
 
             <div className="flex flex-col gap-4">
-              {[
-                 { label: "Nominal (Rp)", node: <input id="form-amount" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" placeholder="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /> },
-                { label: "Pakai Dompet", node: <select className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" value={form.walletId} onChange={(e) => setForm({ ...form, walletId: e.target.value })}>{wallets.map(w => <option key={w.id} value={w.id}>{w.name} ({formatRupiah(w.balance)})</option>)}</select> },
-                { label: "Kategori", node: <select id="form-category" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{(form.type === "income" ? CATEGORIES_INCOME : CATEGORIES_EXPENSE).map((c) => <option key={c} value={c}>{c}</option>)}</select> },
-                { label: "Catatan", node: <input id="form-note" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" placeholder="Opsional" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /> },
-                { label: "Tanggal", node: <input id="form-date" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /> },
-              ].map(({ label, node }) => (
-                <div key={label}>
-                  <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">{label}</label>
-                  {node}
-                </div>
-              ))}
+              <div>
+                <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">Nominal (Rp)</label>
+                <input id="form-amount" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" placeholder="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">Pakai Dompet</label>
+                <select className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" value={form.walletId} onChange={(e) => setForm({ ...form, walletId: e.target.value })}>
+                  {wallets.map(w => <option key={w.id} value={w.id}>{w.name} ({formatRupiah(w.balance)})</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">Kategori</label>
+                <select id="form-category" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                  {(form.type === "income" ? CATEGORIES_INCOME : CATEGORIES_EXPENSE).map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">Catatan</label>
+                <input id="form-note" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" placeholder="Opsional" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">Tanggal</label>
+                <input id="form-date" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              </div>
             </div>
 
             <div className="flex gap-3 mt-5">
@@ -316,6 +336,47 @@ export default function TransaksiPage() {
               </button>
               <button id="form-submit" onClick={handleSubmit} className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity">
                 Simpan Transaksi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Split Bill Modal */}
+      {showSplitModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h2 className="text-lg font-bold text-foreground mb-1">🍕 Split Bill (Patungan)</h2>
+            <p className="text-sm text-muted-foreground mb-5">Hitung bagi rata pengeluaran bareng teman</p>
+            
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">Total Tagihan (Rp)</label>
+                <input className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" placeholder="0" value={splitForm.total} onChange={(e) => setSplitForm({ ...splitForm, total: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">Jumlah Orang</label>
+                <input className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" placeholder="2" value={splitForm.people} onChange={(e) => setSplitForm({ ...splitForm, people: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-[11px] text-muted-foreground uppercase tracking-widest font-semibold mb-1.5">Nama Acara / Makanan</label>
+                <input className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" placeholder="Makan Malam" value={splitForm.note} onChange={(e) => setSplitForm({ ...splitForm, note: e.target.value })} />
+              </div>
+              
+              {splitForm.total && splitForm.people && (
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Per orang bayar:</div>
+                  <div className="text-lg font-bold text-primary">{formatRupiah(parseFloat(splitForm.total) / parseInt(splitForm.people))}</div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setShowSplitModal(false)} className="px-5 py-2.5 rounded-xl bg-secondary text-muted-foreground text-sm font-semibold cursor-pointer hover:text-foreground transition-colors">
+                Batal
+              </button>
+              <button onClick={handleSplitBill} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold cursor-pointer hover:bg-emerald-700 transition-colors">
+                Bagikan ke WA
               </button>
             </div>
           </div>
