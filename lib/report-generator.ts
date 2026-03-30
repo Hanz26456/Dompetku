@@ -99,5 +99,5 @@ export function generateExcelReport(transactions: Transaction[], month: string) 
   const ws = XLSX.utils.json_to_sheet(data)
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, "Transaksi")
-  XLSX.utils.writeFile(wb, `Laporan_Dompetku_${month}.xlsx`)
+  XLSX.writeFile(wb, `Laporan_Dompetku_${month}.xlsx`)
 }

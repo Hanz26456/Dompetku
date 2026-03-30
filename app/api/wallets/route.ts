@@ -50,3 +50,21 @@ export async function DELETE(req: NextRequest) {
   await prisma.wallet.delete({ where: { id } })
   return NextResponse.json({ success: true })
 }
+
+export async function PUT(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { id, name, balance } = await req.json()
+  if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 })
+
+  const wallet = await prisma.wallet.update({
+    where: { id },
+    data: {
+      name: name !== undefined ? name : undefined,
+      balance: balance !== undefined ? parseFloat(balance) : undefined,
+    },
+  })
+
+  return NextResponse.json(wallet)
+}
