@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { Transaction, formatRupiah, CATEGORIES_EXPENSE } from "@/lib/types"
+import { useSession } from "next-auth/react"
+import { generatePDFReport, generateExcelReport } from "@/lib/report-generator"
+import { FileDown, Printer, FileText, Table } from "lucide-react"
 
 type Budget = {
   id: string
@@ -11,6 +14,7 @@ type Budget = {
 }
 
 export default function LaporanPage() {
+  const { data: session } = useSession()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [budgets, setBudgets] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
@@ -36,20 +40,7 @@ export default function LaporanPage() {
         fetch(`/api/budgets?month=${selectedMonth}`)
       ])
       
-      if (!txRes.ok || !bgRes.ok) {
-        console.error("API Error: txRes status =", txRes.status, "bgRes status =", bgRes.status)
-        const txText = await txRes.text().catch(() => "")
-        const bgText = await bgRes.text().catch(() => "")
-        console.error("Transactions response:", txText)
-        console.error("Budgets response:", bgText)
-        alert(`Gagal mengambil data. Server error. Cek console log.`)
-        setLoading(false)
-        return
-      }
-      
       const allTxs: Transaction[] = await txRes.json()
-      // Filter transactions locally for the selected month to avoid backend changes for now
-      // Or if the backend supports it, great. Currently it returns all.
       const filteredTxs = allTxs.filter(t => t.date.substring(0, 7) === selectedMonth)
       setTransactions(filteredTxs)
 
@@ -80,8 +71,12 @@ export default function LaporanPage() {
     fetchData()
   }
 
-  function handlePrint() {
-    window.print()
+  function handleExportPDF() {
+    generatePDFReport(transactions, selectedMonth, session?.user?.name || "User", { income, expense, balance })
+  }
+
+  function handleExportExcel() {
+    generateExcelReport(transactions, selectedMonth)
   }
 
   const income = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
@@ -94,14 +89,12 @@ export default function LaporanPage() {
   })
   const categories = Object.entries(catMap).sort((a, b) => b[1] - a[1])
 
-  // Include categories that have a budget set but zero spending this month
   Object.keys(budgets).forEach(cat => {
     if (catMap[cat] === undefined) {
       categories.push([cat, 0])
     }
   })
 
-  // For monthly trend, we still need ALL transactions regardless of the filter
   const [allTransactionsForTrend, setAllTxsTrend] = useState<Transaction[]>([])
   useEffect(() => {
     fetch("/api/transactions").then(r => r.json()).then(setAllTxsTrend)
@@ -144,20 +137,35 @@ export default function LaporanPage() {
           <p className="text-sm text-muted-foreground mt-1">Ringkasan & analisis anggaran</p>
         </div>
 
-        <div className="flex items-center gap-3 no-print">
+        <div className="flex items-center gap-2 no-print">
           <input 
             type="month" 
             value={selectedMonth}
             onChange={e => setSelectedMonth(e.target.value)}
             className="rounded-xl bg-card border border-border px-4 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring cursor-pointer"
           />
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary hover:bg-muted text-foreground text-sm font-semibold border border-border transition-colors cursor-pointer"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-            Simpan PDF
-          </button>
+          
+          <div className="relative group">
+            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold transition-opacity hover:opacity-90 cursor-pointer">
+              <FileDown size={16} />
+              Export
+            </button>
+            <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-2">
+              <button onClick={handleExportPDF} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer text-left">
+                <FileText size={14} className="text-red-500" />
+                Download PDF
+              </button>
+              <button onClick={handleExportExcel} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer text-left">
+                <Table size={14} className="text-emerald-500" />
+                Download Excel
+              </button>
+              <div className="h-px bg-border my-1" />
+              <button onClick={() => window.print()} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors cursor-pointer text-left">
+                <Printer size={14} className="text-muted-foreground" />
+                Cetak Halaman
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -166,13 +174,13 @@ export default function LaporanPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[
           { label: "Total Pemasukan", value: formatRupiah(income), cls: "text-emerald-600 dark:text-emerald-400" },
           { label: "Total Pengeluaran", value: formatRupiah(expense), cls: "text-red-500 dark:text-red-400" },
           { label: balance >= 0 ? "Surplus" : "Defisit", value: formatRupiah(Math.abs(balance)), cls: balance >= 0 ? "text-primary" : "text-red-500 dark:text-red-400" },
         ].map((c) => (
-          <div key={c.label} className="bg-card border border-border rounded-2xl p-5 break-inside-avoid">
+          <div key={c.label} className="bg-card border border-border rounded-2xl p-5 break-inside-avoid shadow-sm">
             <div className="text-[11px] text-muted-foreground uppercase tracking-widest mb-2">{c.label}</div>
             <div className={`text-xl font-bold ${c.cls}`}>{c.value}</div>
           </div>
@@ -180,7 +188,6 @@ export default function LaporanPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Category breakdown & Budget */}
         <div className="bg-card border border-border rounded-2xl p-5 break-inside-avoid shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-sm font-semibold text-foreground">Realisasi vs Anggaran</h2>
@@ -204,8 +211,7 @@ export default function LaporanPage() {
                 const limit = budgets[cat]
                 const percentage = limit ? Math.min((amt / limit) * 100, 100) : 0
                 
-                // Color logic based on budget usage
-                let barColor = "bg-red-400 dark:bg-red-500" // Default (no budget)
+                let barColor = "bg-red-400 dark:bg-red-500"
                 if (limit) {
                   if (percentage < 75) barColor = "bg-emerald-400 dark:bg-emerald-500"
                   else if (percentage < 100) barColor = "bg-amber-400 dark:bg-amber-500"
@@ -242,25 +248,17 @@ export default function LaporanPage() {
 
                     <div className="h-2.5 bg-secondary rounded-full overflow-hidden relative">
                       {limit ? (
-                        <>
-                          <div
-                            className={`h-full ${barColor} rounded-full transition-all duration-500`}
-                            style={{ width: `${percentage}%` }}
-                          />
-                          {/* Marker for 100% just in case */}
-                          <div className="absolute right-0 top-0 bottom-0 w-px bg-border z-10"></div>
-                        </>
+                        <div
+                          className={`h-full ${barColor} rounded-full transition-all duration-500`}
+                          style={{ width: `${percentage}%` }}
+                        />
                       ) : (
-                        // Fallback simple ratio based on total expense if no budget set
                         <div
                           className="h-full bg-muted-foreground/30 rounded-full transition-all duration-500"
                           style={{ width: `${((amt / (expense||1)) * 100).toFixed(0)}%` }}
                         />
                       )}
                     </div>
-                    {limit && percentage >= 100 && (
-                      <p className="text-[10px] text-red-500 mt-1 font-medium">⚠️ Melebihi anggaran!</p>
-                    )}
                   </div>
                 )
               })}
@@ -268,7 +266,6 @@ export default function LaporanPage() {
           )}
         </div>
 
-        {/* Monthly trend */}
         <div className="bg-card border border-border rounded-2xl p-5 break-inside-avoid shadow-sm print:-mt-0">
           <h2 className="text-sm font-semibold text-foreground mb-5">Tren 6 Bulan Terakhir</h2>
           {monthsTrend.length === 0 ? (
@@ -310,7 +307,6 @@ export default function LaporanPage() {
         </div>
       </div>
 
-      {/* Budget Modal */}
       {showBudgetForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 no-print">
           <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-xl">

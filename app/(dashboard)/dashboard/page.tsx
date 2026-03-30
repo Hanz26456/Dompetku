@@ -4,14 +4,14 @@ import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Transaction, Debt, formatRupiah, formatDate } from "@/lib/types"
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
 
 function StatCard({ label, value, color, icon }: { label: string; value: string; color: string; icon: React.ReactNode }) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-5">
+    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
       <div className={`mb-3 ${color}`}>{icon}</div>
-      <div className="text-[11px] text-muted-foreground uppercase tracking-widest mb-1">{label}</div>
-      <div className={`text-lg font-bold ${color}`}>{value}</div>
+      <div className="text-[11px] text-muted-foreground uppercase tracking-widest mb-1 font-bold">{label}</div>
+      <div className={`text-lg font-black ${color}`}>{value}</div>
     </div>
   )
 }
@@ -20,16 +20,25 @@ export default function DashboardPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [wallets, setWallets] = useState<any[]>([])
+  const [savings, setSavings] = useState<any[]>([])
   const [debts, setDebts] = useState<Debt[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
       fetch("/api/transactions").then((r) => r.json()),
+      fetch("/api/wallets").then((r) => r.json()),
+      fetch("/api/savings").then((r) => r.json()),
       fetch("/api/debts").then((r) => r.json()),
-    ]).then(([txs, dbs]) => {
-      setTransactions(txs)
-      setDebts(dbs)
+    ]).then(([txs, wls, svs, dbs]) => {
+      setTransactions(txs || [])
+      setWallets(wls || [])
+      setSavings(svs || [])
+      setDebts(dbs || [])
+      setLoading(false)
+    }).catch(err => {
+      console.error("Dashboard Fetch Error:", err)
       setLoading(false)
     })
   }, [])
@@ -38,7 +47,10 @@ export default function DashboardPage() {
   const expense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
   const totalDebt = debts.filter((d) => !d.isPaid).reduce((s, d) => s + d.amount, 0)
   const recent = transactions.slice(0, 5)
-  const netBalance = income - expense
+  
+  const walletBalance = wallets.reduce((s, w) => s + w.balance, 0)
+  const savingsBalance = savings.reduce((s, g) => s + g.currentAmount, 0)
+  const totalBalance = walletBalance + savingsBalance
 
   // --- Chart Data Processing ---
   const currentMonthStr = new Date().toISOString().substring(0, 7)
@@ -89,9 +101,9 @@ export default function DashboardPage() {
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
     },
     {
-      label: "Saldo Bersih",
-      value: loading ? "—" : formatRupiah(netBalance),
-      color: netBalance >= 0 ? "text-primary" : "text-red-500 dark:text-red-400",
+      label: "Total Saldo",
+      value: loading ? "—" : formatRupiah(totalBalance),
+      color: totalBalance >= 0 ? "text-primary" : "text-red-500 dark:text-red-400",
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
     },
   ]
@@ -120,7 +132,7 @@ export default function DashboardPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
         {/* Arus Kas */}
-        <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-foreground">Arus Kas Bulanan</h2>
           </div>
@@ -142,10 +154,10 @@ export default function DashboardPage() {
                       <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888888' }} dy={10} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888888' }} dy={10} />
                   <Tooltip 
                     formatter={(val: any) => formatRupiah(val)} 
-                    contentStyle={{ borderRadius: '12px', borderColor: '#e5e7eb', fontSize: '13px' }}
+                    contentStyle={{ borderRadius: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--card)', fontSize: '12px' }}
                   />
                   <Area type="monotone" name="Pemasukan" dataKey="income" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={3} />
                   <Area type="monotone" name="Pengeluaran" dataKey="expense" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={3} />
@@ -156,7 +168,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Kategori Pengeluaran */}
-        <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-foreground">Pengeluaran Bulan Ini</h2>
           </div>
@@ -170,7 +182,7 @@ export default function DashboardPage() {
                 <PieChart>
                   <Tooltip 
                     formatter={(val: any) => formatRupiah(val)}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '13px' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
                   />
                   <Pie
                     data={pieData}
@@ -186,7 +198,7 @@ export default function DashboardPage() {
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -197,12 +209,12 @@ export default function DashboardPage() {
       {/* Recent panels */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Transaksi Terbaru */}
-        <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-foreground">Transaksi Terbaru</h2>
             <button
               onClick={() => router.push("/transaksi")}
-              className="text-xs text-primary hover:underline cursor-pointer"
+              className="text-xs text-primary font-bold hover:underline cursor-pointer"
             >
               Lihat semua →
             </button>
@@ -216,10 +228,10 @@ export default function DashboardPage() {
               {recent.map((t) => (
                 <div key={t.id} className="flex items-center justify-between py-2.5">
                   <div>
-                    <div className="text-sm font-medium text-foreground">{t.note || t.category}</div>
+                    <div className="text-sm font-bold text-foreground">{t.note || t.category}</div>
                     <div className="text-xs text-muted-foreground mt-0.5">{formatDate(t.date)}</div>
                   </div>
-                  <div className={`text-sm font-bold ${t.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                  <div className={`text-sm font-black ${t.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
                     {t.type === "income" ? "+" : "−"}{formatRupiah(t.amount)}
                   </div>
                 </div>
@@ -229,12 +241,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Hutang & Piutang */}
-        <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-foreground">Hutang & Piutang</h2>
             <button
               onClick={() => router.push("/hutang")}
-              className="text-xs text-primary hover:underline cursor-pointer"
+              className="text-xs text-primary font-bold hover:underline cursor-pointer"
             >
               Kelola →
             </button>
@@ -248,12 +260,12 @@ export default function DashboardPage() {
               {debts.filter((d) => !d.isPaid).slice(0, 4).map((d) => (
                 <div key={d.id} className="flex items-center justify-between py-2.5">
                   <div>
-                    <div className="text-sm font-medium text-foreground">{d.name}</div>
-                    <div className={`text-xs mt-0.5 ${d.type === "owe" ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                      {d.type === "owe" ? "Hutang" : "Piutang"}
+                    <div className="text-sm font-bold text-foreground">{d.name}</div>
+                    <div className={`text-xs mt-0.5 font-medium ${d.type === "owe" ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                      {d.type === "owe" ? "Hutang kamu" : "Piutang (tagihan orang)"}
                     </div>
                   </div>
-                  <div className={`text-sm font-bold ${d.type === "owe" ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                  <div className={`text-sm font-black ${d.type === "owe" ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                     {formatRupiah(d.amount)}
                   </div>
                 </div>
