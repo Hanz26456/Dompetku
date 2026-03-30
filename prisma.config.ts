@@ -1,4 +1,5 @@
 import path from "node:path"
+// @ts-ignore
 import { defineConfig } from "prisma/config"
 
 export default defineConfig({

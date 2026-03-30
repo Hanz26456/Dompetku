@@ -14,6 +14,16 @@ function getDueBadge(dueDate: string | null, isPaid: boolean) {
   return { text: formatDate(dueDate), cls: "bg-primary/10 text-primary" }
 }
 
+function generateWaLink(debt: Debt) {
+  // Format message
+  const amountStr = formatRupiah(debt.amount)
+  const dueStr = debt.dueDate ? ` (Jatuh tempo: ${formatDate(debt.dueDate)})` : ""
+  
+  const text = `Halo ${debt.name},\n\nSekadar mengingatkan terkait pinjaman sebesar *${amountStr}*${dueStr} yang belum lunas.\n\nMohon kabari jika sudah ditransfer ya. Terima kasih! 🙏`
+  
+  return `https://wa.me/?text=${encodeURIComponent(text)}`
+}
+
 export default function HutangPage() {
   const [debts, setDebts] = useState<Debt[]>([])
   const [loading, setLoading] = useState(true)
@@ -156,6 +166,17 @@ export default function HutangPage() {
                     >
                       {d.isPaid ? "Buka" : "Lunas"}
                     </button>
+                    {!d.isPaid && d.type === "owed" && (
+                      <a
+                        href={generateWaLink(d)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors border border-green-200 dark:border-green-800 text-center flex items-center justify-center"
+                        title="Kirim pengingat via WhatsApp"
+                      >
+                        Tagih WA
+                      </a>
+                    )}
                     <button
                       onClick={() => handleDelete(d.id)}
                       className="px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors border border-red-200 dark:border-red-800"

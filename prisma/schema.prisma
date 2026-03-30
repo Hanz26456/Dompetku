@@ -18,6 +18,7 @@ model User {
   sessions      Session[]
   transactions  Transaction[]
   debts         Debt[]
+  budgets       Budget[]
   createdAt     DateTime      @default(now())
 }
 
@@ -70,4 +71,17 @@ model Debt {
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
+}
+
+model Budget {
+  id        String   @id @default(cuid())
+  category  String
+  amount    Float
+  month     String   // Format: YYYY-MM
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, category, month])
 }

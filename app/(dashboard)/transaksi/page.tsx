@@ -20,6 +20,7 @@ export default function TransaksiPage() {
     type: "expense", amount: "", category: "Makanan", note: "",
     date: new Date().toISOString().split("T")[0],
   })
+  const [isScanning, setIsScanning] = useState(false)
 
   useEffect(() => { fetchTransactions() }, [])
 
@@ -39,6 +40,60 @@ export default function TransaksiPage() {
     setShowForm(false)
     setForm({ type: "expense", amount: "", category: "Makanan", note: "", date: new Date().toISOString().split("T")[0] })
     fetchTransactions()
+  }
+
+  async function handleScanReceipt(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsScanning(true)
+    try {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = async () => {
+        const base64String = reader.result as string
+        const base64Data = base64String.split(",")[1]
+        
+        try {
+          const res = await fetch("/api/scan-receipt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              base64Image: base64Data,
+              mimeType: file.type
+            })
+          })
+          
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            alert(err.error || "Gagal memindai struk. Coba lagi.")
+            setIsScanning(false)
+            return
+          }
+          
+          const data = await res.json()
+          setForm(prev => ({
+            ...prev,
+            type: "expense",
+            amount: data.amount ? data.amount.toString() : prev.amount,
+            note: data.note || prev.note,
+            category: data.category || "Lainnya"
+          }))
+        } catch (err) {
+          console.error(err)
+          alert("Terjadi kesalahan jaringan.")
+        }
+        setIsScanning(false)
+      }
+      reader.onerror = () => {
+        alert("Gagal membaca file gambar")
+        setIsScanning(false)
+      }
+    } catch (error) {
+      console.error(error)
+      alert("Terjadi kesalahan sistem")
+      setIsScanning(false)
+    }
   }
 
   async function handleDelete(id: string) {
@@ -150,6 +205,30 @@ export default function TransaksiPage() {
           <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-xl">
             <h2 className="text-lg font-bold text-foreground mb-1">Tambah Transaksi</h2>
             <p className="text-sm text-muted-foreground mb-5">Catat pemasukan atau pengeluaran baru</p>
+
+            {/* AI Scanner */}
+            <div className="mb-5 p-4 rounded-xl border border-primary/20 bg-primary/5 flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+                  ✨ AI Scanner
+                  {isScanning && (
+                    <svg className="animate-spin text-primary" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground mt-0.5">Auto-isi dari foto struk</div>
+              </div>
+              <label className={`relative cursor-pointer bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity ${isScanning ? "opacity-50 pointer-events-none" : "hover:opacity-90"}`}>
+                {isScanning ? "Memindai..." : "📷 Upload"}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment" 
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onChange={handleScanReceipt}
+                  disabled={isScanning}
+                />
+              </label>
+            </div>
 
             {/* Type toggle */}
             <div className="flex gap-2 mb-5">
