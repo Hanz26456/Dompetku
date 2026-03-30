@@ -72,46 +72,52 @@ export default function HutangPage() {
   ]
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 border-b border-border/40 pb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Hutang & Piutang</h1>
-          <p className="text-sm text-muted-foreground mt-1">Kelola pinjaman & tagihan</p>
+          <h1 className="text-2xl font-normal text-foreground font-serif tracking-tight">Hutang & <span className="text-primary italic font-bold">Piutang</span></h1>
+          <div className="flex items-center gap-2 mt-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
+            <span>Kelola pinjaman & tagihan</span>
+            <span className="opacity-30">·</span>
+            <span>Dompetku Finance</span>
+          </div>
         </div>
         <button
           id="add-hutang-btn"
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Tambah
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: "Saya berhutang", value: formatRupiah(totalOwe), cls: "text-red-500 dark:text-red-400" },
-          { label: "Saya dihutangi", value: formatRupiah(totalOwed), cls: "text-emerald-600 dark:text-emerald-400" },
-          { label: "Selisih bersih", value: formatRupiah(totalOwed - totalOwe), cls: totalOwed - totalOwe >= 0 ? "text-primary" : "text-red-500 dark:text-red-400" },
+          { label: "Saya berhutang", value: formatRupiah(totalOwe), cls: "text-rose-700", bg: "bg-rose-50/50" },
+          { label: "Saya dihutangi", value: formatRupiah(totalOwed), cls: "text-emerald-700", bg: "bg-emerald-50/50" },
+          { label: "Selisih Bersih", value: formatRupiah(totalOwed - totalOwe), cls: totalOwed - totalOwe >= 0 ? "text-primary" : "text-rose-700", bg: "bg-primary/5" },
         ].map((c) => (
-          <div key={c.label} className="bg-card border border-border rounded-2xl p-5">
-            <div className="text-[11px] text-muted-foreground uppercase tracking-widest mb-2">{c.label}</div>
-            <div className={`text-xl font-bold ${c.cls}`}>{c.value}</div>
+          <div key={c.label} className={`border border-border/40 rounded-2xl p-5 shadow-sm ${c.bg}`}>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] mb-3 font-black opacity-40">{c.label}</div>
+            <div className={`text-xl font-black tracking-tight ${c.cls}`}>{c.value}</div>
           </div>
         ))}
       </div>
 
       {/* List */}
-      <div className="bg-card border border-border rounded-2xl p-5">
-        <div className="flex gap-2 mb-5">
+      <div className="bg-card border border-border/60 rounded-3xl p-6 shadow-sm">
+        <div className="flex gap-2 mb-10 border-b border-border/30 pb-6">
           {filterOptions.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all ${
-                filter === f.key ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-              }`}
+              className={`px-6 py-2 rounded-xl text-xs font-bold transition-all relative
+                ${filter === f.key
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                  : "bg-secondary text-muted-foreground hover:bg-muted"
+                }`}
             >
               {f.label}
             </button>
@@ -119,9 +125,9 @@ export default function HutangPage() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-muted-foreground text-center py-10">Memuat...</p>
+          <p className="text-sm text-muted-foreground text-center py-20 italic font-serif">Memuat data...</p>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-10">Belum ada data</p>
+          <p className="text-sm text-muted-foreground text-center py-20 italic font-serif">Belum ada data ditemukan</p>
         ) : (
           <div className="flex flex-col gap-2">
             {filtered.map((d) => {
@@ -129,59 +135,66 @@ export default function HutangPage() {
               return (
                 <div
                   key={d.id}
-                  className={`flex items-center gap-3 p-3.5 rounded-xl bg-secondary transition-opacity ${d.isPaid ? "opacity-50" : ""}`}
+                  className={`group flex items-center gap-4 p-3 rounded-2xl bg-secondary/20 hover:bg-secondary/40 transition-all border border-transparent hover:border-border/60 ${d.isPaid ? "opacity-60" : ""}`}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-lg font-black shrink-0 transition-transform group-hover:scale-110 ${
                     d.type === "owe"
-                      ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
-                      : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                      ? "bg-rose-100 text-rose-700 shadow-sm"
+                      : "bg-emerald-100 text-emerald-700 shadow-sm"
                   }`}>
                     {d.name[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-foreground">
-                      {d.name}{" "}
-                      <span className="text-xs text-muted-foreground font-normal">
-                        ({d.type === "owe" ? "hutang" : "piutang"})
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <div className="text-sm font-bold text-foreground tracking-tight truncate">{d.name}</div>
+                      <span className={`text-[7px] font-black px-1.5 py-0.5 rounded border tracking-widest uppercase
+                        ${d.type === "owe" ? "border-rose-200 text-rose-600 bg-rose-50" : "border-emerald-200 text-emerald-600 bg-emerald-50"}`}>
+                        {d.type === "owe" ? "HUTANG" : "PIUTANG"}
                       </span>
                     </div>
-                    {d.note && <div className="text-xs text-muted-foreground mt-0.5 truncate">{d.note}</div>}
+                    {d.note && <div className="text-[10px] text-muted-foreground/50 font-medium truncate">{d.note}</div>}
                   </div>
                   <div className="text-right shrink-0">
-                    <div className={`text-sm font-bold ${d.type === "owe" ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                    <div className={`text-base font-black tracking-tight ${d.type === "owe" ? "text-rose-700" : "text-emerald-700"}`}>
                       {formatRupiah(d.amount)}
                     </div>
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full inline-block mt-1 ${badge.cls}`}>
+                    <span className={`text-[8px] px-1.5 py-0.5 rounded-lg font-black mt-1 inline-block uppercase tracking-wider ${badge.cls}`}>
                       {badge.text}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1.5 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-all ml-4">
                     <button
                       onClick={() => togglePaid(d.id, d.isPaid)}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors border ${
-                        d.isPaid
-                          ? "border-border text-muted-foreground hover:text-foreground bg-secondary"
-                          : "border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100"
-                      }`}
+                      className={`p-2 rounded-lg transition-all border
+                        ${d.isPaid
+                          ? "border-border text-muted-foreground hover:bg-secondary"
+                          : "border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                        }`}
+                      title={d.isPaid ? "Belum Lunas" : "Tandai Lunas"}
                     >
-                      {d.isPaid ? "Buka" : "Lunas"}
+                      {d.isPaid ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      )}
                     </button>
                     {!d.isPaid && d.type === "owed" && (
                       <a
                         href={generateWaLink(d)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors border border-green-200 dark:border-green-800 text-center flex items-center justify-center"
-                        title="Kirim pengingat via WhatsApp"
+                        className="p-2.5 rounded-xl text-green-700 bg-green-50 hover:bg-green-100 transition-all border border-green-200"
+                        title="Kirim pengingat WhatsApp"
                       >
-                        Tagih WA
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-10.4 8.38 8.38 0 0 1 3.9 1.1L21 3z"/></svg>
                       </a>
                     )}
                     <button
                       onClick={() => handleDelete(d.id)}
-                      className="px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors border border-red-200 dark:border-red-800"
+                      className="p-2.5 rounded-xl text-rose-700 bg-rose-50 hover:bg-rose-100 transition-all border border-rose-200"
+                      title="Hapus"
                     >
-                      Hapus
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                   </div>
                 </div>

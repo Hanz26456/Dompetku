@@ -144,68 +144,70 @@ export default function TransaksiPage() {
   ]
 
   return (
-    <div>
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Transaksi</h1>
-          <p className="text-sm text-muted-foreground mt-1">Catat pemasukan & pengeluaran</p>
+          <h1 className="text-2xl font-normal text-foreground font-serif tracking-tight">Riwayat <span className="text-primary italic font-bold">Transaksi</span></h1>
+          <div className="flex items-center gap-2 mt-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
+            <span>Catat pemasukan & pengeluaran</span>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setShowSplitModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-foreground text-sm font-semibold cursor-pointer hover:bg-muted transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-secondary text-foreground text-xs font-bold hover:bg-muted transition-all active:scale-95"
           >
             🍕 Split Bill
           </button>
           <button
             id="add-transaksi-btn"
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Tambah Transaksi
           </button>
         </div>
       </div>
 
       {/* Wallet overview */}
-      <div className="flex gap-3 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar lg:grid lg:grid-cols-4 lg:overflow-visible">
         {wallets.map(w => (
-          <div key={w.id} className="min-w-[150px] bg-card border border-border rounded-2xl p-4 shadow-sm shrink-0">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{w.name}</div>
-            <div className="text-base font-bold text-foreground">{formatRupiah(w.balance)}</div>
+          <div key={w.id} className="min-w-[150px] bg-card border border-border/60 rounded-xl p-4 shadow-sm shrink-0 transition-transform hover:scale-[1.02]">
+            <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5 shadow-sm font-black opacity-40">{w.name}</div>
+            <div className="text-base font-black text-foreground tracking-tight">{formatRupiah(w.balance)}</div>
           </div>
         ))}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: "Total Pemasukan", value: formatRupiah(totalIncome), cls: "text-emerald-600 dark:text-emerald-400" },
-          { label: "Total Pengeluaran", value: formatRupiah(totalExpense), cls: "text-red-500 dark:text-red-400" },
-          { label: "Selisih", value: formatRupiah(totalIncome - totalExpense), cls: totalIncome - totalExpense >= 0 ? "text-primary" : "text-red-500 dark:text-red-400" },
+          { label: "Total Pemasukan", value: formatRupiah(totalIncome), cls: "text-emerald-700", bg: "bg-emerald-50/50" },
+          { label: "Total Pengeluaran", value: formatRupiah(totalExpense), cls: "text-rose-700", bg: "bg-rose-50/50" },
+          { label: "Selisih Bersih", value: formatRupiah(totalIncome - totalExpense), cls: "text-amber-800", bg: "bg-primary/5" },
         ].map((c) => (
-          <div key={c.label} className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-            <div className="text-[11px] text-muted-foreground uppercase tracking-widest mb-2">{c.label}</div>
-            <div className={`text-xl font-bold ${c.cls}`}>{c.value}</div>
+          <div key={c.label} className={`border border-border/40 rounded-2xl p-5 shadow-sm ${c.bg}`}>
+            <div className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] mb-3 font-black opacity-40">{c.label}</div>
+            <div className={`text-xl font-black tracking-tight ${c.cls}`}>{c.value}</div>
           </div>
         ))}
       </div>
 
-      {/* List card */}
-      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+      {/* List content */}
+      <div className="bg-card border border-border/60 rounded-3xl p-6 shadow-sm">
         {/* Filter tabs */}
-        <div className="flex gap-2 mb-5">
+        <div className="flex gap-2 mb-10 border-b border-border/30 pb-6">
           {filterOptions.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all ${
-                filter === f.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
-              }`}
+              className={`px-6 py-2 rounded-xl text-xs font-bold transition-all relative
+                ${filter === f.key
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                  : "bg-secondary text-muted-foreground hover:bg-muted"
+                }`}
             >
               {f.label}
             </button>
@@ -213,34 +215,36 @@ export default function TransaksiPage() {
         </div>
 
         {loading ? (
-          <p className="text-sm text-muted-foreground text-center py-10">Memuat...</p>
+          <p className="text-sm text-muted-foreground text-center py-20 italic font-serif">Memuat data transaksi...</p>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-10">Belum ada transaksi</p>
+          <p className="text-sm text-muted-foreground text-center py-20 italic font-serif">Belum ada transaksi ditemukan</p>
         ) : (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-4">
             {filtered.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors border border-transparent hover:border-border"
+                className="group flex items-center gap-4 p-4 rounded-2xl bg-secondary/15 hover:bg-secondary/30 transition-all border border-transparent hover:border-border/40"
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${
-                  t.type === "income" ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-red-100 dark:bg-red-900/30"
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 transition-transform group-hover:scale-110 ${
+                  t.type === "income" ? "bg-emerald-100 text-emerald-700 shadow-sm" : "bg-rose-100 text-rose-700 shadow-sm"
                 }`}>
                   {ICON_MAP[t.category] ?? "📌"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-foreground truncate">{t.note || t.category}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{t.category} · {formatDate(t.date)}</div>
+                  <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mb-0.5">{t.category}</div>
+                  <div className="text-sm font-bold text-foreground tracking-tight truncate">{t.note || t.category}</div>
+                  <div className="text-[10px] text-muted-foreground/50 font-medium mt-0.5">{formatDate(t.date)}</div>
                 </div>
-                <div className="text-right shrink-0">
-                  <div className={`text-sm font-bold ${t.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
+                  <div className={`text-base font-black tracking-tight ${t.type === "income" ? "text-emerald-700" : "text-rose-700"}`}>
                     {t.type === "income" ? "+" : "−"}{formatRupiah(t.amount)}
                   </div>
                   <button
                     onClick={() => handleDelete(t.id)}
-                    className="text-xs text-muted-foreground hover:text-destructive cursor-pointer mt-0.5 transition-colors"
+                    className="p-1 rounded-lg text-muted-foreground/30 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
+                    title="Hapus"
                   >
-                    Hapus
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                   </button>
                 </div>
               </div>

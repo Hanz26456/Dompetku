@@ -101,72 +101,111 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col sticky top-0 h-screen">
+      <aside className="w-64 shrink-0 bg-sidebar flex flex-col sticky top-0 h-screen overflow-hidden">
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-sidebar-border">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">
-              ₽
-            </div>
-            <span className="text-base font-bold text-sidebar-foreground tracking-tight">
-              Dompet<span className="text-primary">ku</span>
+        <div className="px-6 py-8">
+          <div className="flex flex-col">
+            <span className="text-2xl font-bold tracking-tight text-white flex items-baseline gap-0.5">
+              Dompet<span className="font-serif italic text-primary/90">ku</span>
             </span>
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">
-            Keuangan Keluarga
+            <div className="text-[9px] text-sidebar-foreground mt-1 uppercase tracking-[0.2em] font-bold opacity-50">
+              Keuangan Keluarga
+            </div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5">
-          {navItems.map((item) => {
-            const active = pathname === item.href
-            return (
-              <button
-                key={item.href}
-                id={`nav-${item.href.replace("/", "")}`}
-                onClick={() => router.push(item.href)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all duration-150 text-left
-                  ${active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  }`}
-              >
-                <span className={active ? "text-primary" : ""}>{item.icon}</span>
-                {item.label}
-              </button>
-            )
-          })}
-        </nav>
+        <div className="flex-1 overflow-y-auto px-3 py-2 custom-scrollbar">
+          {/* MENU Group */}
+          <div className="mb-6">
+            <div className="px-4 mb-3 text-[10px] font-black text-sidebar-foreground/30 uppercase tracking-widest">
+              Menu
+            </div>
+            <nav className="flex flex-col gap-0.5">
+              {navItems.slice(0, 4).map((item) => {
+                const active = pathname === item.href
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => router.push(item.href)}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all duration-200 text-left relative group
+                      ${active
+                        ? "bg-white/10 text-white"
+                        : "text-sidebar-foreground hover:bg-white/5 hover:text-sidebar-accent-foreground"
+                      }`}
+                  >
+                    {active && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-primary rounded-r-full" />}
+                    <span className={`${active ? "text-primary" : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground"}`}>
+                      {item.icon}
+                    </span>
+                    {item.label}
+                  </button>
+                )
+              })}
+            </nav>
+          </div>
+
+          {/* DOMPET Group */}
+          <div>
+            <div className="px-4 mb-3 text-[10px] font-black text-sidebar-foreground/30 uppercase tracking-widest">
+              Dompet
+            </div>
+            <nav className="flex flex-col gap-0.5">
+              {navItems.slice(4).map((item) => {
+                const active = pathname === item.href
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => router.push(item.href)}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all duration-200 text-left relative group
+                      ${active
+                        ? "bg-white/10 text-white"
+                        : "text-sidebar-foreground hover:bg-white/5 hover:text-sidebar-accent-foreground"
+                      }`}
+                  >
+                    {active && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-primary rounded-r-full" />}
+                    <span className={`${active ? "text-primary" : "text-sidebar-foreground/60 group-hover:text-sidebar-foreground"}`}>
+                      {item.icon}
+                    </span>
+                    {item.label}
+                  </button>
+                )
+              })}
+            </nav>
+          </div>
+        </div>
 
         {/* Footer: user + theme toggle */}
-        <div className="px-3 pb-4 pt-3 border-t border-sidebar-border flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0">
+        <div className="p-4 bg-black/20">
+          <div className="flex items-center justify-between bg-sidebar-border/30 p-2 rounded-2xl border border-white/5">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-orange-700 flex items-center justify-center text-white text-xs font-black shadow-lg">
                 {initials}
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-semibold text-sidebar-foreground truncate max-w-[80px]">
+                <div className="text-xs font-bold text-white truncate max-w-[80px]">
                   {session?.user?.name ?? "User"}
                 </div>
                 <button
-                  id="signout-btn"
                   onClick={() => signOut({ callbackUrl: "/login" })}
-                  className="text-[11px] text-destructive hover:underline cursor-pointer"
+                  className="text-[10px] text-orange-500 font-bold hover:text-orange-400 transition-colors cursor-pointer"
                 >
                   Keluar
                 </button>
               </div>
             </div>
-            <ThemeToggle />
+            <div className="opacity-60 scale-90">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-8 overflow-y-auto min-w-0">
-        {children}
+      <main className="flex-1 h-screen overflow-y-auto bg-background selection:bg-primary/20">
+        <div className="max-w-[1280px] mx-auto p-4 lg:p-6">
+          {children}
+        </div>
       </main>
     </div>
   )

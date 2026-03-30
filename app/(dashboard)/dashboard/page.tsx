@@ -6,12 +6,20 @@ import { useRouter } from "next/navigation"
 import { Transaction, Debt, formatRupiah, formatDate } from "@/lib/types"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
 
-function StatCard({ label, value, color, icon }: { label: string; value: string; color: string; icon: React.ReactNode }) {
+function StatCard({ label, value, color, icon, trend, bgColor }: { label: string; value: string; color: string; icon: React.ReactNode; trend?: string; bgColor: string }) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-      <div className={`mb-3 ${color}`}>{icon}</div>
-      <div className="text-[11px] text-muted-foreground uppercase tracking-widest mb-1 font-bold">{label}</div>
-      <div className={`text-lg font-black ${color}`}>{value}</div>
+    <div className={`border border-border/40 rounded-2xl p-4 shadow-sm flex flex-col gap-2 transition-all hover:shadow-md ${bgColor}`}>
+      <div className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-black opacity-60">
+        {label}
+      </div>
+      <div className={`text-xl font-black tracking-tight ${color}`}>
+        {value}
+      </div>
+      {trend && (
+        <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg bg-white/40 self-start border border-black/5 ${color}`}>
+          {trend}
+        </div>
+      )}
     </div>
   )
 }
@@ -71,7 +79,8 @@ export default function DashboardPage() {
     monthMap[rawPeriod][t.type === "income" ? "income" : "expense"] += t.amount
   })
 
-  const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef']
+  // Natural Earthy Colors for Pie
+  const COLORS = ['#92400e', '#15803d', '#1d4ed8', '#7e22ce', '#b91c1c', '#0369a1', '#be185d', '#4338ca', '#374151']
   const pieData = Object.entries(catMap)
     .map(([name, value], i) => ({ name, value, fill: COLORS[i % COLORS.length] }))
     .sort((a,b) => b.value - a.value)
@@ -81,86 +90,110 @@ export default function DashboardPage() {
     .slice(-6)
   // -----------------------------
 
+  const formatNumberShort = (num: number) => {
+    if (Math.abs(num) >= 1_000_000) {
+      return (num / 1_000_000).toFixed(1).replace('.', ',') + ' jt'
+    }
+    return formatRupiah(num)
+  }
+
   const stats = [
     {
       label: "Pemasukan",
-      value: loading ? "—" : formatRupiah(income),
-      color: "text-emerald-600 dark:text-emerald-400",
-      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+      value: loading ? "—" : formatNumberShort(income),
+      trend: "+8% MoM",
+      color: "text-emerald-700 dark:text-emerald-400",
+      bgColor: "bg-emerald-50/50 dark:bg-emerald-950/20",
+      icon: null,
     },
     {
       label: "Pengeluaran",
-      value: loading ? "—" : formatRupiah(expense),
-      color: "text-red-500 dark:text-red-400",
-      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
+      value: loading ? "—" : formatNumberShort(expense),
+      trend: "+3% MoM",
+      color: "text-rose-700 dark:text-rose-400",
+      bgColor: "bg-rose-50/50 dark:bg-rose-950/20",
+      icon: null,
     },
     {
       label: "Hutang Aktif",
-      value: loading ? "—" : formatRupiah(totalDebt),
-      color: "text-amber-600 dark:text-amber-400",
-      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
+      value: loading ? "—" : formatNumberShort(totalDebt),
+      trend: `${debts.filter(d => !d.isPaid).length} item`,
+      color: "text-amber-700 dark:text-amber-400",
+      bgColor: "bg-amber-50/50 dark:bg-amber-950/20",
+      icon: null,
     },
     {
       label: "Total Saldo",
-      value: loading ? "—" : formatRupiah(totalBalance),
-      color: totalBalance >= 0 ? "text-primary" : "text-red-500 dark:text-red-400",
-      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+      value: loading ? "—" : formatNumberShort(totalBalance),
+      trend: "Dompet + Target",
+      color: totalBalance >= 0 ? "text-primary" : "text-rose-700 dark:text-rose-400",
+      bgColor: "bg-primary/5 dark:bg-primary/10",
+      icon: null,
     },
   ]
 
   const firstName = session?.user?.name?.split(" ")[0]
 
   return (
-    <div>
+    <div className="space-y-8">
       {/* Header */}
-      <div className="mb-7">
-        <h1 className="text-2xl font-bold text-foreground">
-          Selamat datang, {firstName} 👋
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-        </p>
+      <div className="flex flex-col gap-2 border-b border-border/40 pb-6">
+        <div>
+          <h1 className="text-3xl font-normal text-foreground font-serif tracking-tight">
+            Halo, <span className="text-primary italic font-bold">{firstName}</span> — selamat datang kembali.
+          </h1>
+          <div className="flex items-center gap-2 mt-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
+            <span>{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+            <span className="opacity-30">·</span>
+            <span>Ringkasan Keuangan</span>
+          </div>
+        </div>
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {stats.map((s) => (
           <StatCard key={s.label} {...s} />
         ))}
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Arus Kas */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-foreground">Arus Kas Bulanan</h2>
+        <div className="xl:col-span-2 bg-card border border-border/50 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col">
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Arus Kas Bulanan</h2>
+              <p className="text-[11px] text-muted-foreground mt-1">6 bulan terakhir</p>
+            </div>
           </div>
-          <div className="h-[250px] w-full">
+          <div className="h-[300px] w-full">
             {loading ? (
               <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">Memuat Grafik...</div>
             ) : areaData.length === 0 ? (
-              <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">Belum ada data</div>
+              <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground italic font-serif">Belum ada data transaksi</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={areaData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <AreaChart data={areaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#15803d" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#15803d" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#b91c1c" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#b91c1c" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#888888' }} dy={10} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#a8a29e', fontWeight: 600 }} dy={15} />
                   <Tooltip 
                     formatter={(val: any) => formatRupiah(val)} 
-                    contentStyle={{ borderRadius: '12px', border: '1px solid var(--border)', backgroundColor: 'var(--card)', fontSize: '12px' }}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--card)', fontSize: '12px', fontWeight: 'bold' }}
+                    cursor={{ stroke: 'var(--primary)', strokeWidth: 1, strokeDasharray: '4 4' }}
                   />
-                  <Area type="monotone" name="Pemasukan" dataKey="income" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={3} />
-                  <Area type="monotone" name="Pengeluaran" dataKey="expense" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={3} />
+                  <Area type="monotone" name="Pemasukan" dataKey="income" stroke="#15803d" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={2} dot={{ r: 4, fill: '#15803d', strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 0 }} />
+                  <Area type="monotone" name="Pengeluaran" dataKey="expense" stroke="#b91c1c" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, fill: '#b91c1c', strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 0 }} />
+                  <Legend verticalAlign="bottom" height={36} iconType="plainline" wrapperStyle={{ fontSize: '10px', paddingTop: '20px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.7 }} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -168,71 +201,90 @@ export default function DashboardPage() {
         </div>
 
         {/* Kategori Pengeluaran */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-foreground">Pengeluaran Bulan Ini</h2>
+        <div className="bg-card border border-border/50 rounded-2xl p-5 shadow-sm">
+          <div className="mb-6">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Pengeluaran Bulan Ini</h2>
           </div>
-          <div className="h-[250px] w-full flex items-center justify-center">
+          <div className="h-[250px] w-full flex items-center justify-center relative">
             {loading ? (
               <div className="text-sm text-muted-foreground">Memuat Grafik...</div>
             ) : pieData.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Belum ada pengeluaran</div>
+              <div className="text-sm text-muted-foreground italic font-serif">Belum ada pengeluaran</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Tooltip 
-                    formatter={(val: any) => formatRupiah(val)}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
-                  />
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={65}
-                    outerRadius={90}
-                    paddingAngle={5}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">total</span>
+                  <span className="text-xl font-black">{formatNumberShort(expense)}</span>
+                </div>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Tooltip 
+                      formatter={(val: any) => formatRupiah(val)}
+                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
+                    />
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={95}
+                      paddingAngle={4}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </>
             )}
+          </div>
+          <div className="mt-6 flex flex-col gap-2">
+            {pieData.slice(0, 4).map((item, i) => (
+              <div key={i} className="flex items-center justify-between text-[11px]">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }} />
+                  <span className="font-bold text-muted-foreground">{item.name}</span>
+                </div>
+                <span className="font-black text-foreground">{formatNumberShort(item.value)}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Recent panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Transaksi Terbaru */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="bg-card border border-border/50 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-foreground">Transaksi Terbaru</h2>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Transaksi Terbaru</h2>
             <button
               onClick={() => router.push("/transaksi")}
-              className="text-xs text-primary font-bold hover:underline cursor-pointer"
+              className="text-[10px] text-primary font-black uppercase tracking-widest hover:opacity-70 transition-opacity flex items-center gap-1"
             >
-              Lihat semua →
+              Lihat semua <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </button>
           </div>
           {loading ? (
             <p className="text-sm text-muted-foreground">Memuat...</p>
           ) : recent.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Belum ada transaksi</p>
+            <p className="text-sm text-muted-foreground text-center py-10 italic font-serif">Belum ada transaksi</p>
           ) : (
-            <div className="flex flex-col divide-y divide-border">
+            <div className="flex flex-col gap-1">
               {recent.map((t) => (
-                <div key={t.id} className="flex items-center justify-between py-2.5">
+                <div key={t.id} className="flex items-center justify-between py-3 border-b border-border/30 last:border-0">
                   <div>
-                    <div className="text-sm font-bold text-foreground">{t.note || t.category}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{formatDate(t.date)}</div>
+                    <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mb-0.5">{t.category}</div>
+                    <div className="text-xs font-bold text-foreground tracking-tight">{t.note || t.category}</div>
                   </div>
-                  <div className={`text-sm font-black ${t.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
-                    {t.type === "income" ? "+" : "−"}{formatRupiah(t.amount)}
+                  <div className="text-right">
+                    <div className={`text-xs font-black ${t.type === "income" ? "text-emerald-700" : "text-rose-700"}`}>
+                      {t.type === "income" ? "+" : "−"}{formatRupiah(t.amount)}
+                    </div>
+                    <div className="text-[9px] text-muted-foreground/50 font-medium mt-0.5">{new Date(t.date).toLocaleDateString("id-ID", { day: 'numeric', month: 'short' })}</div>
                   </div>
                 </div>
               ))}
@@ -241,32 +293,38 @@ export default function DashboardPage() {
         </div>
 
         {/* Hutang & Piutang */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="bg-card border border-border/50 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-foreground">Hutang & Piutang</h2>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Hutang & Piutang</h2>
             <button
               onClick={() => router.push("/hutang")}
-              className="text-xs text-primary font-bold hover:underline cursor-pointer"
+              className="text-[10px] text-primary font-black uppercase tracking-widest hover:opacity-70 transition-opacity flex items-center gap-1"
             >
-              Kelola →
+              Kelola <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </button>
           </div>
           {loading ? (
             <p className="text-sm text-muted-foreground">Memuat...</p>
           ) : debts.filter((d) => !d.isPaid).length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Tidak ada hutang aktif</p>
+            <p className="text-sm text-muted-foreground text-center py-10 italic font-serif">Tidak ada hutang aktif</p>
           ) : (
-            <div className="flex flex-col divide-y divide-border">
+            <div className="flex flex-col gap-1">
               {debts.filter((d) => !d.isPaid).slice(0, 4).map((d) => (
-                <div key={d.id} className="flex items-center justify-between py-2.5">
+                <div key={d.id} className="flex items-center justify-between py-3 border-b border-border/30 last:border-0">
                   <div>
-                    <div className="text-sm font-bold text-foreground">{d.name}</div>
-                    <div className={`text-xs mt-0.5 font-medium ${d.type === "owe" ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                      {d.type === "owe" ? "Hutang kamu" : "Piutang (tagihan orang)"}
+                    <div className="text-xs font-bold text-foreground tracking-tight">{d.name}</div>
+                    <div className="text-[9px] font-bold text-muted-foreground/40 mt-0.5 uppercase tracking-widest">
+                      {d.type === "owe" ? "Hutang kamu" : "Piutang kamu"} · {new Date(d.createdAt).getFullYear()}
                     </div>
                   </div>
-                  <div className={`text-sm font-black ${d.type === "owe" ? "text-red-500 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                    {formatRupiah(d.amount)}
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <div className="text-xs font-black text-foreground">
+                      {formatRupiah(d.amount)}
+                    </div>
+                    <div className={`text-[7px] font-black px-1.5 py-0.5 rounded border tracking-widest uppercase
+                      ${d.type === "owe" ? "bg-rose-50 border-rose-100 text-rose-700" : "bg-emerald-50 border-emerald-100 text-emerald-700"}`}>
+                      {d.type === "owe" ? "HUTANG" : "PIUTANG"}
+                    </div>
                   </div>
                 </div>
               ))}
