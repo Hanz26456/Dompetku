@@ -31,6 +31,7 @@ model Wallet {
   userId       String
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  payments     DebtPayment[]
   createdAt    DateTime      @default(now())
 }
 
@@ -73,6 +74,7 @@ model Transaction {
   wallet        Wallet?      @relation(fields: [walletId], references: [id])
   savingsGoalId String?
   savingsGoal   SavingsGoal? @relation(fields: [savingsGoalId], references: [id])
+  payments      DebtPayment[]
   createdAt     DateTime     @default(now())
 }
 
@@ -86,6 +88,7 @@ model Debt {
   note      String?
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments  DebtPayment[]
   createdAt DateTime  @default(now())
 }
 
@@ -112,4 +115,17 @@ model SavingsGoal {
   transactions Transaction[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+}
+
+model DebtPayment {
+  id            String       @id @default(cuid())
+  amount        Float
+  date          DateTime     @default(now())
+  debtId        String
+  debt          Debt         @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  walletId      String?
+  wallet        Wallet?      @relation(fields: [walletId], references: [id])
+  transactionId String?
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  createdAt     DateTime     @default(now())
 }

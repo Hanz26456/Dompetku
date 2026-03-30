@@ -32,6 +32,16 @@ export interface SavingsGoal {
   updatedAt: string
 }
 
+export interface DebtPayment {
+  id: string
+  amount: number
+  date: string
+  debtId: string
+  walletId?: string | null
+  transactionId?: string | null
+  createdAt: string
+}
+
 export interface Debt {
   id: string
   name: string
@@ -39,8 +49,9 @@ export interface Debt {
   type: DebtType
   dueDate: string | null
   isPaid: boolean
-  note: string
+  note: string | null
   userId: string
+  payments: DebtPayment[]
   createdAt: string
 }
 

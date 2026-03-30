@@ -10,6 +10,7 @@ export async function GET() {
 
   const debts = await prisma.debt.findMany({
     where: { userId: session.user.id },
+    include: { payments: true } as any,
     orderBy: { createdAt: "desc" },
   })
   return NextResponse.json(debts)
