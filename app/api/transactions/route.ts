@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
       date: new Date(body.date),
       userId: session.user.id,
       walletId: walletId,
-    },
+      receiptUrl: body.receiptUrl,
+    } as any,
   })
 
   // Update Wallet Balance

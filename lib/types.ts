@@ -6,11 +6,12 @@ export interface Transaction {
   amount: number
   type: TransactionType
   category: string
-  note: string
+  note: string | null
   date: string
   userId: string
   walletId?: string | null
   savingsGoalId?: string | null
+  receiptUrl?: string | null
   createdAt: string
 }
 

@@ -75,6 +75,7 @@ model Transaction {
   savingsGoalId String?
   savingsGoal   SavingsGoal? @relation(fields: [savingsGoalId], references: [id])
   payments      DebtPayment[]
+  receiptUrl    String?
   createdAt     DateTime     @default(now())
 }
 

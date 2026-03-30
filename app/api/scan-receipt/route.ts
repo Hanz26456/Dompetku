@@ -16,6 +16,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing image data" }, { status: 400 })
     }
 
+    // --- Save image to public/uploads ---
+    let savedImageUrl = null
+    try {
+      const { v4: uuidv4 } = require("uuid")
+      const { writeFile, mkdir } = require("fs/promises")
+      const { join } = require("path")
+      
+      const buffer = Buffer.from(base64Image, "base64")
+      const uploadDir = join(process.cwd(), "public", "uploads")
+      await mkdir(uploadDir, { recursive: true })
+      
+      const fileExtension = mimeType.split("/").pop() || "jpg"
+      const fileName = `scan-${uuidv4()}.${fileExtension}`
+      const path = join(uploadDir, fileName)
+      
+      await writeFile(path, buffer)
+      savedImageUrl = `/uploads/${fileName}`
+    } catch (e) {
+      console.error("Failed to save scan image:", e)
+    }
+    // --- End Save image ---
+
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
       return NextResponse.json({ error: "Gemini API Key is missing in server configuration" }, { status: 500 })
@@ -57,6 +79,7 @@ Contoh response sukses:
     const cleanJsonString = textResult.replace(/```json/ig, "").replace(/```/g, "").trim()
     
     const resultJson = JSON.parse(cleanJsonString)
+    resultJson.receiptUrl = savedImageUrl
 
     // Fallback amount logic if AI returned string
     if (typeof resultJson.amount === "string") {
