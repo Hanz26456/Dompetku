@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Transaction, Debt, formatRupiah, formatDate } from "@/lib/types"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts"
 
 function StatCard({ label, value, color, icon }: { label: string; value: string; color: string; icon: React.ReactNode }) {
   return (
@@ -38,6 +39,35 @@ export default function DashboardPage() {
   const totalDebt = debts.filter((d) => !d.isPaid).reduce((s, d) => s + d.amount, 0)
   const recent = transactions.slice(0, 5)
   const netBalance = income - expense
+
+  // --- Chart Data Processing ---
+  const currentMonthStr = new Date().toISOString().substring(0, 7)
+  const catMap: Record<string, number> = {}
+  const monthMap: Record<string, { name: string; income: number; expense: number; rawDate: string }> = {}
+
+  transactions.forEach((t) => {
+    // Pie Data
+    if (t.type === "expense" && t.date.startsWith(currentMonthStr)) {
+      catMap[t.category] = (catMap[t.category] || 0) + t.amount
+    }
+    // Area Data
+    const rawPeriod = t.date.substring(0, 7) // YYYY-MM
+    const monthName = new Date(t.date).toLocaleDateString("id-ID", { month: "short" })
+    if (!monthMap[rawPeriod]) {
+      monthMap[rawPeriod] = { name: monthName, income: 0, expense: 0, rawDate: rawPeriod }
+    }
+    monthMap[rawPeriod][t.type === "income" ? "income" : "expense"] += t.amount
+  })
+
+  const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef']
+  const pieData = Object.entries(catMap)
+    .map(([name, value], i) => ({ name, value, fill: COLORS[i % COLORS.length] }))
+    .sort((a,b) => b.value - a.value)
+
+  const areaData = Object.values(monthMap)
+    .sort((a,b) => a.rawDate.localeCompare(b.rawDate))
+    .slice(-6)
+  // -----------------------------
 
   const stats = [
     {
@@ -81,14 +111,91 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {stats.map((s) => (
           <StatCard key={s.label} {...s} />
         ))}
       </div>
 
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+        {/* Arus Kas */}
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-foreground">Arus Kas Bulanan</h2>
+          </div>
+          <div className="h-[250px] w-full">
+            {loading ? (
+              <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">Memuat Grafik...</div>
+            ) : areaData.length === 0 ? (
+              <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">Belum ada data</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={areaData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888888' }} dy={10} />
+                  <Tooltip 
+                    formatter={(val: any) => formatRupiah(val)} 
+                    contentStyle={{ borderRadius: '12px', borderColor: '#e5e7eb', fontSize: '13px' }}
+                  />
+                  <Area type="monotone" name="Pemasukan" dataKey="income" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={3} />
+                  <Area type="monotone" name="Pengeluaran" dataKey="expense" stroke="#ef4444" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={3} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Kategori Pengeluaran */}
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-foreground">Pengeluaran Bulan Ini</h2>
+          </div>
+          <div className="h-[250px] w-full flex items-center justify-center">
+            {loading ? (
+              <div className="text-sm text-muted-foreground">Memuat Grafik...</div>
+            ) : pieData.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Belum ada pengeluaran</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip 
+                    formatter={(val: any) => formatRupiah(val)}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '13px' }}
+                  />
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={65}
+                    outerRadius={90}
+                    paddingAngle={5}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Recent panels */}
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Transaksi Terbaru */}
         <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
