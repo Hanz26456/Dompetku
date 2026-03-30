@@ -20,16 +20,39 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json()
+  const amount = parseFloat(body.amount)
+  
+  // Find wallet (default to first wallet if not provided)
+  let walletId = body.walletId
+  if (!walletId) {
+    const firstWallet = await prisma.wallet.findFirst({ where: { userId: session.user.id } })
+    walletId = firstWallet?.id
+  }
+
   const transaction = await prisma.transaction.create({
     data: {
-      amount: parseFloat(body.amount),
+      amount,
       type: body.type,
       category: body.category,
       note: body.note ?? "",
       date: new Date(body.date),
       userId: session.user.id,
+      walletId: walletId,
     },
   })
+
+  // Update Wallet Balance
+  if (walletId) {
+    const isExpense = body.type === "expense"
+    await prisma.wallet.update({
+      where: { id: walletId },
+      data: {
+        balance: {
+          [isExpense ? "decrement" : "increment"]: amount
+        }
+      }
+    })
+  }
   
   // Fire and forget sheets sync
   appendTransaction(transaction).catch(console.error)
@@ -45,6 +68,20 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get("id")
   if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 })
   
+  // Get transaction before delete to reverse balance
+  const tx = await prisma.transaction.findUnique({ where: { id } })
+  if (tx && tx.walletId) {
+    const isExpense = tx.type === "expense"
+    await prisma.wallet.update({
+      where: { id: tx.walletId },
+      data: {
+        balance: {
+          [isExpense ? "increment" : "decrement"]: tx.amount
+        }
+      }
+    })
+  }
+
   await prisma.transaction.delete({ where: { id } })
   
   // Fire and forget sheets sync

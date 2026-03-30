@@ -19,7 +19,18 @@ model User {
   transactions  Transaction[]
   debts         Debt[]
   budgets       Budget[]
+  wallets       Wallet[]
   createdAt     DateTime      @default(now())
+}
+
+model Wallet {
+  id           String        @id @default(cuid())
+  name         String        // e.g., "Tunai", "Bank BCA", "Tabungan"
+  balance      Float         @default(0)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
 }
 
 model Account {
@@ -57,6 +68,8 @@ model Transaction {
   date      DateTime
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletId  String?
+  wallet    Wallet?  @relation(fields: [walletId], references: [id])
   createdAt DateTime @default(now())
 }
 

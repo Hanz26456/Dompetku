@@ -13,16 +13,32 @@ type Filter = "all" | "income" | "expense"
 
 export default function TransaksiPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [wallets, setWallets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [showSplitModal, setShowSplitModal] = useState(false)
   const [filter, setFilter] = useState<Filter>("all")
   const [form, setForm] = useState({
     type: "expense", amount: "", category: "Makanan", note: "",
     date: new Date().toISOString().split("T")[0],
+    walletId: "",
   })
+  const [splitForm, setSplitForm] = useState({ total: "", people: "2", note: "Makan Bareng" })
   const [isScanning, setIsScanning] = useState(false)
 
-  useEffect(() => { fetchTransactions() }, [])
+  useEffect(() => { 
+    fetchTransactions()
+    fetchWallets()
+  }, [])
+
+  async function fetchWallets() {
+    const res = await fetch("/api/wallets")
+    const data = await res.json()
+    setWallets(data)
+    if (data.length > 0 && !form.walletId) {
+      setForm(prev => ({ ...prev, walletId: data[0].id }))
+    }
+  }
 
   async function fetchTransactions() {
     const res = await fetch("/api/transactions")
@@ -38,8 +54,20 @@ export default function TransaksiPage() {
       body: JSON.stringify(form),
     })
     setShowForm(false)
-    setForm({ type: "expense", amount: "", category: "Makanan", note: "", date: new Date().toISOString().split("T")[0] })
+    setForm({ ...form, amount: "", note: "", date: new Date().toISOString().split("T")[0] })
     fetchTransactions()
+    fetchWallets() // Refresh balances
+  }
+
+  function handleSplitBill() {
+    const perPerson = parseFloat(splitForm.total) / parseInt(splitForm.people)
+    const text = `Halo! Ini rincian patungan *${splitForm.note}*:\n\nTotal: *${formatRupiah(parseFloat(splitForm.total))}*\nBagi: *${splitForm.people} orang*\n\nPer orang bayar: *${formatRupiah(perPerson)}*\n\nBisa transfer ke rekening saya ya, terima kasih! 🙏`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank")
+    
+    // Auto-fill form and show it for recording
+    setForm(prev => ({ ...prev, type: "expense", amount: perPerson.toString(), note: `Patungan: ${splitForm.note}` }))
+    setShowSplitModal(false)
+    setShowForm(true)
   }
 
   async function handleScanReceipt(e: React.ChangeEvent<HTMLInputElement>) {
@@ -119,14 +147,32 @@ export default function TransaksiPage() {
           <h1 className="text-2xl font-bold text-foreground">Transaksi</h1>
           <p className="text-sm text-muted-foreground mt-1">Catat pemasukan & pengeluaran</p>
         </div>
-        <button
-          id="add-transaksi-btn"
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Tambah Transaksi
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowSplitModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-foreground text-sm font-semibold cursor-pointer hover:bg-muted transition-colors"
+          >
+            🍕 Split Bill
+          </button>
+          <button
+            id="add-transaksi-btn"
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Tambah Transaksi
+          </button>
+        </div>
+      </div>
+
+      {/* Wallet overview (Simplified) */}
+      <div className="flex gap-3 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+        {wallets.map(w => (
+          <div key={w.id} className="min-w-[140px] bg-card border border-border rounded-xl p-3 shrink-0">
+            <div className="text-[10px] text-muted-foreground uppercase mb-1">{w.name}</div>
+            <div className="text-sm font-bold text-foreground">{formatRupiah(w.balance)}</div>
+          </div>
+        ))}
       </div>
 
       {/* Stats */}
@@ -251,7 +297,8 @@ export default function TransaksiPage() {
 
             <div className="flex flex-col gap-4">
               {[
-                { label: "Nominal (Rp)", node: <input id="form-amount" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" placeholder="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /> },
+                 { label: "Nominal (Rp)", node: <input id="form-amount" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="number" placeholder="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /> },
+                { label: "Pakai Dompet", node: <select className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" value={form.walletId} onChange={(e) => setForm({ ...form, walletId: e.target.value })}>{wallets.map(w => <option key={w.id} value={w.id}>{w.name} ({formatRupiah(w.balance)})</option>)}</select> },
                 { label: "Kategori", node: <select id="form-category" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{(form.type === "income" ? CATEGORIES_INCOME : CATEGORIES_EXPENSE).map((c) => <option key={c} value={c}>{c}</option>)}</select> },
                 { label: "Catatan", node: <input id="form-note" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" placeholder="Opsional" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /> },
                 { label: "Tanggal", node: <input id="form-date" className="w-full rounded-xl bg-secondary border border-border px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /> },
