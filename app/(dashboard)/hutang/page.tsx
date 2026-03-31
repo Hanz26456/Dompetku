@@ -43,7 +43,8 @@ export default function HutangPage() {
 
   async function fetchDebts() {
     const res = await fetch("/api/debts")
-    setDebts(await res.json())
+    const data = await res.json()
+    setDebts(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
@@ -82,9 +83,10 @@ export default function HutangPage() {
     fetchWallets()
   }
 
-  const filtered = debts.filter((d) => filter === "all" || d.type === filter)
-  const totalOwe = debts.filter((d) => d.type === "owe" && !d.isPaid).reduce((s, d) => s + (d.amount - (d.payments?.reduce((ss, pp) => ss + pp.amount, 0) || 0)), 0)
-  const totalOwed = debts.filter((d) => d.type === "owed" && !d.isPaid).reduce((s, d) => s + (d.amount - (d.payments?.reduce((ss, pp) => ss + pp.amount, 0) || 0)), 0)
+  const safeDebts = Array.isArray(debts) ? debts : []
+  const filtered = safeDebts.filter((d) => filter === "all" || d.type === filter)
+  const totalOwe = safeDebts.filter((d) => d.type === "owe" && !d.isPaid).reduce((s, d) => s + (d.amount - (d.payments?.reduce((ss, pp) => ss + pp.amount, 0) || 0)), 0)
+  const totalOwed = safeDebts.filter((d) => d.type === "owed" && !d.isPaid).reduce((s, d) => s + (d.amount - (d.payments?.reduce((ss, pp) => ss + pp.amount, 0) || 0)), 0)
 
   const filterOptions: { key: Filter; label: string }[] = [
     { key: "all", label: "Semua" },
@@ -96,7 +98,7 @@ export default function HutangPage() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 border-b border-border/40 pb-6">
         <div>
-          <h1 className="text-2xl font-normal text-foreground font-serif tracking-tight">Hutang & <span className="text-primary italic font-bold">Piutang</span></h1>
+          <h1 className="text-2xl lg:text-3xl font-normal text-foreground font-serif tracking-tight">Hutang & <span className="text-primary italic font-bold">Piutang</span></h1>
           <div className="flex items-center gap-2 mt-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
             <span>Kelola pinjaman & tagihan</span>
             <span className="opacity-30">·</span>
@@ -126,12 +128,12 @@ export default function HutangPage() {
       </div>
 
       <div className="bg-card border border-border/60 rounded-3xl p-6 shadow-sm">
-        <div className="flex gap-2 mb-10 border-b border-border/30 pb-6">
+        <div className="flex gap-2 mb-10 border-b border-border/30 pb-6 overflow-x-auto no-scrollbar scroll-smooth snap-x">
           {filterOptions.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`px-6 py-2 rounded-xl text-xs font-bold transition-all relative
+              className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative shrink-0 snap-center
                 ${filter === f.key ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-secondary text-muted-foreground hover:bg-muted"}`}
             >
               {f.label}

@@ -76,7 +76,7 @@ export default function TabunganPage() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-5xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 border-b border-border/40 pb-6">
         <div>
-          <h1 className="text-2xl font-normal text-foreground font-serif tracking-tight">Target <span className="text-primary italic font-bold">Tabungan</span> 🎯</h1>
+          <h1 className="text-2xl lg:text-3xl font-normal text-foreground font-serif tracking-tight">Target <span className="text-primary italic font-bold">Tabungan</span> 🎯</h1>
           <div className="flex items-center gap-2 mt-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
             <span>Wujudkan impianmu dengan menabung terencana</span>
           </div>

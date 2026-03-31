@@ -21,8 +21,8 @@ export default function AnggaranPage() {
         fetch(`/api/budgets?month=${month}`).then(r => r.json()),
         fetch("/api/transactions").then(r => r.json())
       ])
-      setBudgets(bRes || [])
-      setTransactions(tRes || [])
+      setBudgets(Array.isArray(bRes) ? bRes : [])
+      setTransactions(Array.isArray(tRes) ? tRes : [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -43,7 +43,8 @@ export default function AnggaranPage() {
   }
 
   const getSpendingForCategory = (cat: string) => {
-    return transactions
+    const safeTransactions = Array.isArray(transactions) ? transactions : []
+    return safeTransactions
       .filter(t => t.type === "expense" && t.category === cat && t.date.startsWith(month))
       .reduce((sum, t) => sum + t.amount, 0)
   }
@@ -53,7 +54,7 @@ export default function AnggaranPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-6">
         <div>
-          <h1 className="text-2xl font-normal text-foreground font-serif tracking-tight">Atur <span className="text-primary italic font-bold">Anggaran</span></h1>
+          <h1 className="text-2xl lg:text-3xl font-normal text-foreground font-serif tracking-tight">Atur <span className="text-primary italic font-bold">Anggaran</span></h1>
           <div className="flex items-center gap-2 mt-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
             <span>Tetapkan limit pengeluaran bulanan</span>
           </div>
@@ -70,8 +71,8 @@ export default function AnggaranPage() {
         <p className="text-sm text-muted-foreground text-center py-20 italic font-serif">Memuat data anggaran...</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {CATEGORIES_EXPENSE.map(cat => {
-            const budget = budgets.find(b => b.category === cat)
+          {(Array.isArray(transactions) ? CATEGORIES_EXPENSE : []).map(cat => {
+            const budget = Array.isArray(budgets) ? budgets.find(b => b.category === cat) : null
             const spending = getSpendingForCategory(cat)
             const limit = budget?.amount || 0
             const percent = limit > 0 ? Math.min((spending / limit) * 100, 100) : 0

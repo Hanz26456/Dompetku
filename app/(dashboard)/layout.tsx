@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { AiChatAssistant } from "@/components/ai-chat-assistant"
+import { MobileNav } from "@/components/mobile-nav"
 
 const navItems = [
   {
@@ -111,8 +112,8 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="w-64 shrink-0 bg-sidebar flex flex-col sticky top-0 h-screen overflow-hidden">
+      {/* Sidebar - Desktop Only */}
+      <aside className="hidden lg:flex w-64 shrink-0 bg-sidebar flex-col sticky top-0 h-screen overflow-hidden border-r border-white/5">
         {/* Logo */}
         <div className="px-6 py-8">
           <div className="flex flex-col">
@@ -213,11 +214,27 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 h-screen overflow-y-auto bg-background selection:bg-primary/20">
-        <div className="max-w-[1280px] mx-auto p-4 lg:p-6">
+      <main className="flex-1 h-screen overflow-y-auto bg-background selection:bg-primary/20 flex flex-col">
+        {/* Mobile Header */}
+        <header className="lg:hidden flex items-center justify-between p-4 sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/40">
+          <div className="flex flex-col">
+            <span className="text-xl font-bold tracking-tight flex items-baseline gap-0.5">
+              Dompet<span className="font-serif italic text-primary/90">ku</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <div className="w-8 h-8 rounded-lg bg-orange-700/80 flex items-center justify-center text-white text-[10px] font-black shadow-inner">
+              {initials}
+            </div>
+          </div>
+        </header>
+
+        <div className="max-w-[1280px] mx-auto p-4 lg:p-6 w-full pb-24 lg:pb-6">
           {children}
         </div>
         <AiChatAssistant />
+        <MobileNav />
       </main>
     </div>
   )

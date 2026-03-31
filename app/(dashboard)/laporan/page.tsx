@@ -41,13 +41,16 @@ export default function LaporanPage() {
         fetch(`/api/budgets?month=${selectedMonth}`)
       ])
       
-      const allTxs: Transaction[] = await txRes.json()
-      const filteredTxs = allTxs.filter(t => t.date.substring(0, 7) === selectedMonth)
+      const allTxs = await txRes.json()
+      const safeAllTxs = Array.isArray(allTxs) ? allTxs : []
+      const filteredTxs = safeAllTxs.filter(t => t.date.substring(0, 7) === selectedMonth)
       setTransactions(filteredTxs)
 
-      const bgs: Budget[] = await bgRes.json()
+      const bgs = await bgRes.json()
       const bgMap: Record<string, number> = {}
-      bgs.forEach(b => bgMap[b.category] = b.amount)
+      if (Array.isArray(bgs)) {
+        bgs.forEach(b => bgMap[b.category] = b.amount)
+      }
       setBudgets(bgMap)
     } catch (e) {
       console.error("Fetch Data Error:", e)
@@ -80,8 +83,9 @@ export default function LaporanPage() {
     generateExcelReport(transactions, selectedMonth)
   }
 
-  const income = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
-  const expense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+  const safeTransactions = Array.isArray(transactions) ? transactions : []
+  const income = safeTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
+  const expense = safeTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
   const balance = income - expense
 
   const catMap: Record<string, number> = {}
@@ -134,7 +138,7 @@ export default function LaporanPage() {
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 border-b border-border/40 pb-6">
         <div>
-          <h1 className="text-2xl font-normal text-foreground font-serif tracking-tight">Laporan <span className="text-primary italic font-bold">Keuangan</span></h1>
+          <h1 className="text-2xl lg:text-3xl font-normal text-foreground font-serif tracking-tight">Laporan <span className="text-primary italic font-bold">Keuangan</span></h1>
           <div className="flex items-center gap-2 mt-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
             <span>Ringkasan & analisis anggaran</span>
           </div>

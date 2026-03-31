@@ -56,7 +56,8 @@ export default function TransaksiPage() {
 
   async function fetchTransactions() {
     const res = await fetch("/api/transactions")
-    setTransactions(await res.json())
+    const data = await res.json()
+    setTransactions(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
@@ -249,9 +250,10 @@ export default function TransaksiPage() {
     fetchWallets()
   }
 
-  const filtered = transactions.filter((t) => filter === "all" || t.type === filter)
-  const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
-  const totalExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+  const safeTransactions = Array.isArray(transactions) ? transactions : []
+  const filtered = safeTransactions.filter((t) => filter === "all" || t.type === filter)
+  const totalIncome = safeTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
+  const totalExpense = safeTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
 
   const filterOptions: { key: Filter; label: string }[] = [
     { key: "all", label: "Semua" },
@@ -263,7 +265,7 @@ export default function TransaksiPage() {
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-6">
         <div>
-          <h1 className="text-2xl font-normal text-foreground font-serif tracking-tight">Riwayat <span className="text-primary italic font-bold">Transaksi</span></h1>
+          <h1 className="text-2xl lg:text-3xl font-normal text-foreground font-serif tracking-tight">Riwayat <span className="text-primary italic font-bold">Transaksi</span></h1>
           <div className="flex items-center gap-2 mt-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
             <span>Catat pemasukan & pengeluaran</span>
           </div>
@@ -277,9 +279,9 @@ export default function TransaksiPage() {
         </div>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar lg:grid lg:grid-cols-4 lg:overflow-visible">
-        {wallets.map(w => (
-          <div key={w.id} className="min-w-[150px] bg-card border border-border/60 rounded-xl p-4 shadow-sm shrink-0 transition-transform hover:scale-[1.02]">
+      <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar scroll-smooth snap-x lg:grid lg:grid-cols-4 lg:overflow-visible">
+        {(Array.isArray(wallets) ? wallets : []).map(w => (
+          <div key={w.id} className="min-w-[150px] bg-card border border-border/60 rounded-xl p-4 shadow-sm shrink-0 snap-center transition-transform hover:scale-[1.02]">
             <div className="text-[9px] text-muted-foreground uppercase tracking-widest mb-0.5 shadow-sm font-black opacity-40">{w.name}</div>
             <div className="text-base font-black text-foreground tracking-tight">{formatRupiah(w.balance)}</div>
           </div>
@@ -300,9 +302,16 @@ export default function TransaksiPage() {
       </div>
 
       <div className="bg-card border border-border/60 rounded-3xl p-6 shadow-sm">
-        <div className="flex gap-2 mb-10 border-b border-border/30 pb-6">
+        <div className="flex gap-2 mb-10 border-b border-border/30 pb-6 overflow-x-auto no-scrollbar scroll-smooth snap-x">
           {filterOptions.map((f) => (
-            <button key={f.key} onClick={() => setFilter(f.key)} className={`px-6 py-2 rounded-xl text-xs font-bold transition-all relative ${filter === f.key ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-secondary text-muted-foreground hover:bg-muted"}`}>{f.label}</button>
+            <button 
+              key={f.key} 
+              onClick={() => setFilter(f.key)} 
+              className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative shrink-0 snap-center
+                ${filter === f.key ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-secondary text-muted-foreground hover:bg-muted"}`}
+            >
+              {f.label}
+            </button>
           ))}
         </div>
 

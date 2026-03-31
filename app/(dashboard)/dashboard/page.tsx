@@ -54,13 +54,18 @@ export default function DashboardPage() {
     })
   }, [])
 
-  const income = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
-  const expense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
-  const totalDebt = debts.filter((d) => !d.isPaid).reduce((s, d) => s + d.amount, 0)
-  const recent = transactions.slice(0, 5)
+  const safeTransactions = Array.isArray(transactions) ? transactions : []
+  const safeDebts = Array.isArray(debts) ? debts : []
+  const safeWallets = Array.isArray(wallets) ? wallets : []
+  const safeSavings = Array.isArray(savings) ? savings : []
+
+  const income = safeTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0)
+  const expense = safeTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0)
+  const totalDebt = safeDebts.filter((d) => !d.isPaid).reduce((s, d) => s + d.amount, 0)
+  const recent = safeTransactions.slice(0, 5)
   
-  const walletBalance = wallets.reduce((s, w) => s + w.balance, 0)
-  const savingsBalance = savings.reduce((s, g) => s + g.currentAmount, 0)
+  const walletBalance = safeWallets.reduce((s, w) => s + w.balance, 0)
+  const savingsBalance = safeSavings.reduce((s, g) => s + g.currentAmount, 0)
   const totalBalance = walletBalance + savingsBalance
 
   // --- Chart Data Processing ---
@@ -68,7 +73,7 @@ export default function DashboardPage() {
   const catMap: Record<string, number> = {}
   const monthMap: Record<string, { name: string; income: number; expense: number; rawDate: string }> = {}
 
-  transactions.forEach((t) => {
+  safeTransactions.forEach((t) => {
     // Pie Data
     if (t.type === "expense" && t.date.startsWith(currentMonthStr)) {
       catMap[t.category] = (catMap[t.category] || 0) + t.amount
@@ -120,7 +125,7 @@ export default function DashboardPage() {
     {
       label: "Hutang Aktif",
       value: loading ? "—" : formatNumberShort(totalDebt),
-      trend: `${debts.filter(d => !d.isPaid).length} item`,
+      trend: `${safeDebts.filter(d => !d.isPaid).length} item`,
       color: "text-amber-700 dark:text-amber-400",
       bgColor: "bg-amber-50/50 dark:bg-amber-950/20",
       icon: null,
@@ -142,7 +147,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-2 border-b border-border/40 pb-6">
         <div>
-          <h1 className="text-3xl font-normal text-foreground font-serif tracking-tight">
+          <h1 className="text-2xl lg:text-3xl font-normal text-foreground font-serif tracking-tight">
             Halo, <span className="text-primary italic font-bold">{firstName}</span> — selamat datang kembali.
           </h1>
           <div className="flex items-center gap-2 mt-2 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
@@ -161,10 +166,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Budget Alerts */}
-      {!loading && budgets.length > 0 && (
+      {!loading && Array.isArray(budgets) && budgets.length > 0 && (
         <div className="flex flex-col gap-4">
           {budgets.map(b => {
-             const spending = transactions
+             const spending = safeTransactions
                .filter(t => t.type === "expense" && t.category === b.category && t.date.startsWith(currentMonthStr))
                .reduce((s, t) => s + t.amount, 0)
              const percent = (spending / b.amount) * 100
@@ -336,11 +341,11 @@ export default function DashboardPage() {
           </div>
           {loading ? (
             <p className="text-sm text-muted-foreground">Memuat...</p>
-          ) : debts.filter((d) => !d.isPaid).length === 0 ? (
+          ) : safeDebts.filter((d) => !d.isPaid).length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-10 italic font-serif">Tidak ada hutang aktif</p>
           ) : (
             <div className="flex flex-col gap-1">
-              {debts.filter((d) => !d.isPaid).slice(0, 4).map((d) => (
+              {safeDebts.filter((d) => !d.isPaid).slice(0, 4).map((d) => (
                 <div key={d.id} className="flex items-center justify-between py-3 border-b border-border/30 last:border-0">
                   <div>
                     <div className="text-xs font-bold text-foreground tracking-tight">{d.name}</div>
